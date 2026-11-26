@@ -21,7 +21,7 @@ import { currentLegalMarks, isStandardLegal, standardBadge } from "./legality.js
 import { quoteValue } from "./qbuilder.js";
 import { resolveEntries, type Resolution } from "./resolve.js";
 import type { SetResolver } from "./sets.js";
-import type { TcgIoClient } from "./tcgio.js";
+import type { CardSource } from "./cardsource.js";
 import { guard, textResult } from "./toolutil.js";
 import type { Card } from "./types.js";
 
@@ -78,7 +78,7 @@ export function classifyNameOnlyAdd(
   };
 }
 
-export function registerCollectionTools(server: McpServer, api: TcgIoClient, resolver: SetResolver): void {
+export function registerCollectionTools(server: McpServer, api: CardSource, resolver: SetResolver): void {
   // ------------------------------------------------------------ collection_list
   server.registerTool(
     "collection_list",
@@ -176,7 +176,7 @@ export function registerCollectionTools(server: McpServer, api: TcgIoClient, res
             accepted.push({ count: r.entry.count, name: r.card.name, setCode: r.entry.setCode, number: r.entry.number });
             understood.push(`✓ ${r.entry.count} × ${r.card.name} — ${setRef(r.card)} · ${standardBadge(r.card, marks)} · \`${r.card.id}\``);
           } else {
-            const why = r.notes.length > 0 ? r.notes.join("; ") : "not found on pokemontcg.io";
+            const why = r.notes.length > 0 ? r.notes.join("; ") : "not found in the card database";
             rejected.push(`✗ Line ${r.entry.line} \`${r.entry.raw}\` — ${why}; not added.`);
           }
         }

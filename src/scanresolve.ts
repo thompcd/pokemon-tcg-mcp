@@ -28,7 +28,7 @@ import { quoteValue } from "./qbuilder.js";
 import { mapLimited, resolveEntries } from "./resolve.js";
 import type { ScannedLine } from "./scan.js";
 import type { SetResolver } from "./sets.js";
-import type { TcgIoClient } from "./tcgio.js";
+import type { CardSource } from "./cardsource.js";
 import type { Card, SetInfo } from "./types.js";
 
 export interface ScanResolution {
@@ -137,7 +137,7 @@ function namesCompatible(a: string, b: string): boolean {
 
 export async function resolveScanned(
   parsedLines: ScannedLine[],
-  api: TcgIoClient,
+  api: CardSource,
   resolver: SetResolver,
   marks: string[],
 ): Promise<ScanResolution[]> {
@@ -202,7 +202,7 @@ export async function resolveScanned(
           }
           r.name = res.card.name;
         } else {
-          r.reason = res.notes.length > 0 ? res.notes.join("; ") : "not found on pokemontcg.io";
+          r.reason = res.notes.length > 0 ? res.notes.join("; ") : "not found in the card database";
         }
       }
     } catch (err) {
@@ -231,7 +231,7 @@ export async function resolveScanned(
     const sets: SetInfo[] = liveCodes.flatMap((code) => mapping.get(code.toUpperCase()) ?? []);
     if (sets.length === 0) {
       for (const { r } of group) {
-        r.notes.push(`JP code ${jpCode} maps to ${liveCodes.join("/")}, but that set is not on pokemontcg.io yet — falling back to a name search`);
+        r.notes.push(`JP code ${jpCode} maps to ${liveCodes.join("/")}, but that set is not in the card database yet — falling back to a name search`);
         nameFallback.push(r);
       }
       return;
@@ -288,7 +288,7 @@ export async function resolveScanned(
       candidates = candidates.slice(0, 8);
       if (candidates.length === 0) {
         for (const r of group) {
-          r.notes.push(`no set on pokemontcg.io has a printed total of ${total} — resolving by name instead`);
+          r.notes.push(`no set in the card database has a printed total of ${total} — resolving by name instead`);
           nameFallback.push(r);
         }
         return;
@@ -367,7 +367,7 @@ export async function resolveScanned(
           for (const c of res.cards) if (!distinct.has(normalizeName(c.name))) distinct.set(normalizeName(c.name), c);
           if (distinct.size === 0) {
             for (const { r } of group) {
-              r.reason = `not found — no card named "${lookup}" on pokemontcg.io; check the spelling or retake`;
+              r.reason = `not found — no card named "${lookup}" in the card database; check the spelling or retake`;
               misses.push(r);
             }
             return;

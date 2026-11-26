@@ -15,7 +15,7 @@ import { currentLegalMarks, isStandardLegal } from "./legality.js";
 import { standardClause, textContainsClause } from "./qbuilder.js";
 import { resolveEntries, type Resolution } from "./resolve.js";
 import type { SetResolver } from "./sets.js";
-import type { TcgIoClient } from "./tcgio.js";
+import type { CardSource } from "./cardsource.js";
 import { guard, textResult } from "./toolutil.js";
 import type { Card } from "./types.js";
 import { deckProblems } from "./validate.js";
@@ -80,7 +80,7 @@ async function suggestAcquisitions(
   deckSize: 40 | 60,
   marks: string[],
   maxProxies: number,
-  api: TcgIoClient,
+  api: CardSource,
 ): Promise<string[]> {
   const g = guidelines(deckSize);
   const mainType = deck.energyTypes[0];
@@ -137,7 +137,7 @@ async function suggestAcquisitions(
   return out;
 }
 
-export function registerBuildTools(server: McpServer, api: TcgIoClient, resolver: SetResolver): void {
+export function registerBuildTools(server: McpServer, api: CardSource, resolver: SetResolver): void {
   server.registerTool(
     "build_decks",
     {

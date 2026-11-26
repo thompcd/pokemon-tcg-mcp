@@ -64,7 +64,7 @@ export async function httpGetText(url: string, headers: Record<string, string> =
     break;
   }
   if (!res.ok) {
-    const hint = res.status === 429 ? " (rate limited — setting POKEMONTCG_API_KEY raises the limit)" : "";
+    const hint = res.status === 429 ? " (rate limited — try again shortly)" : "";
     await res.body?.cancel().catch(() => {});
     throw new HttpError(`HTTP ${res.status} from ${new URL(url).host}${hint}`, res.status, url);
   }

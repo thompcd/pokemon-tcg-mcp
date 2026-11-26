@@ -1,14 +1,10 @@
 import { TtlLruCache } from "./cache.js";
 import { CARD_TTL_MS, TCGIO_API_BASE, pokemonTcgApiKey } from "./config.js";
 import { HttpError, httpGetJson } from "./http.js";
+import type { CardSource, SearchOptions, SearchResult } from "./cardsource.js";
 import type { Card, SetInfo } from "./types.js";
 
-export interface SearchResult {
-  cards: Card[];
-  totalCount: number;
-  /** Page size used — if totalCount exceeds it, results were truncated. */
-  pageSize: number;
-}
+export type { SearchResult } from "./cardsource.js";
 
 interface ListResponse<T> {
   data?: T[];
@@ -23,7 +19,12 @@ export const CARD_SELECT = [
   "tcgplayer", "cardmarket",
 ].join(",");
 
-export class TcgIoClient {
+/**
+ * Legacy pokemontcg.io v2 backend. pokemontcg.io is being retired in favour of
+ * the paid Scrydex API; kept behind CARD_SOURCE=pokemontcgio while it answers.
+ */
+export class TcgIoClient implements CardSource {
+  readonly label = "pokemontcg.io";
   private cache = new TtlLruCache(400);
   private apiKey = pokemonTcgApiKey();
 
@@ -33,7 +34,7 @@ export class TcgIoClient {
 
   async searchCards(
     q: string,
-    opts: { pageSize?: number; orderBy?: string; page?: number } = {},
+    opts: SearchOptions = {},
   ): Promise<SearchResult> {
     const pageSize = opts.pageSize ?? 250;
     const params = new URLSearchParams({ q, pageSize: String(pageSize), select: CARD_SELECT });

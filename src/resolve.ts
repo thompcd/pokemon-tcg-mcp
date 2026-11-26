@@ -14,7 +14,7 @@ import { normalizeName, normNum, type DeckEntry } from "./deck.js";
 import { isStandardLegal } from "./legality.js";
 import { quoteValue } from "./qbuilder.js";
 import type { SetResolver } from "./sets.js";
-import type { TcgIoClient } from "./tcgio.js";
+import type { CardSource } from "./cardsource.js";
 import type { Card } from "./types.js";
 
 export interface Resolution {
@@ -47,7 +47,7 @@ export async function mapLimited<T, R>(items: T[], limit: number, fn: (item: T) 
 
 export async function resolveEntries(
   entries: DeckEntry[],
-  api: TcgIoClient,
+  api: CardSource,
   resolver: SetResolver,
   marks: string[],
 ): Promise<Resolution[]> {
