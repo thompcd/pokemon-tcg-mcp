@@ -1,5 +1,5 @@
 /**
- * Builders for pokemontcg.io's Lucene-style `q` parameter. Pure functions —
+ * Builders for the pokemontcg.io-style Lucene `q` strings every CardSource accepts. Pure functions —
  * unit tested in test/qbuilder.test.ts.
  */
 

@@ -19,7 +19,7 @@ import { fetchMetaSnapshot } from "./limitless.js";
 import { buildEffectQuery, buildQuery, extractKeywords, quoteValue, standardClause } from "./qbuilder.js";
 import { resolveEntries } from "./resolve.js";
 import type { SetResolver } from "./sets.js";
-import type { SearchResult, TcgIoClient } from "./tcgio.js";
+import type { CardSource, SearchResult } from "./cardsource.js";
 import { guard, textResult } from "./toolutil.js";
 import type { Card } from "./types.js";
 import { deckProblems } from "./validate.js";
@@ -33,14 +33,14 @@ function truncationNote(res: SearchResult): string | undefined {
 
 const SUPERTYPE_INPUT = z.enum(["pokemon", "trainer", "energy"]);
 
-export function registerTools(server: McpServer, api: TcgIoClient, resolver: SetResolver): void {
+export function registerTools(server: McpServer, api: CardSource, resolver: SetResolver): void {
   // ---------------------------------------------------------------- search_cards
   server.registerTool(
     "search_cards",
     {
       title: "Search Pokémon TCG cards",
       description:
-        "Search the pokemontcg.io card database. `query` accepts a card name or a raw Lucene query " +
+        "Search the Pokémon TCG card database. `query` accepts a card name or a raw Lucene query " +
         "(e.g. 'supertype:trainer subtypes:supporter'). Filters are ANDed. Returns compact card summaries.",
       inputSchema: {
         query: z.string().optional().describe("Card name or raw Lucene q (field:value syntax passes through)"),
@@ -92,10 +92,10 @@ export function registerTools(server: McpServer, api: TcgIoClient, resolver: Set
     {
       title: "Get full card details",
       description:
-        "Fetch one card with full text, image URL and prices. Provide a pokemontcg.io `id` (e.g. 'me3-75'), " +
+        "Fetch one card with full text, image URL and prices. Provide a card `id` (e.g. 'sv01-001'), " +
         "or an exact `name` plus optional TCG Live `set` code (e.g. name 'Jacinthe', set 'POR').",
       inputSchema: {
-        id: z.string().optional().describe("pokemontcg.io card id, e.g. 'me3-75'"),
+        id: z.string().optional().describe("card id from search results, e.g. 'sv01-001'"),
         name: z.string().optional().describe("Exact card name (used when no id is given)"),
         set: z.string().optional().describe("TCG Live set code to disambiguate, e.g. 'POR'"),
       },
@@ -116,7 +116,7 @@ export function registerTools(server: McpServer, api: TcgIoClient, resolver: Set
           if (args.set) {
             const sets = await resolver.lookup(args.set);
             if (sets.length > 0) q += ` (${sets.map((s) => `set.id:${s.id}`).join(" OR ")})`;
-            else notes.push(`Set code "${args.set}" not recognized on pokemontcg.io — searched all sets instead.`);
+            else notes.push(`Set code "${args.set}" not recognized in the card database — searched all sets instead.`);
           }
           const res = await api.searchCards(q, { orderBy: "-set.releaseDate", pageSize: 60 });
           const exact = res.cards.filter((c) => normalizeName(c.name) === normalizeName(args.name!));

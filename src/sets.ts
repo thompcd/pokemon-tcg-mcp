@@ -1,15 +1,15 @@
-import type { TcgIoClient } from "./tcgio.js";
+import type { CardSource } from "./cardsource.js";
 import type { SetInfo } from "./types.js";
 
 /**
- * Maps TCG Live / PTCGO set codes (PBL, POR, TWM, …) to pokemontcg.io sets by
+ * Maps TCG Live / PTCGO set codes (PBL, POR, TWM, …) to card-source sets by
  * matching the `ptcgoCode` field of /sets. Built lazily on first use and
  * cached (the underlying /sets call is cached for 24h). A code can map to
  * multiple sets (e.g. CRZ covers Crown Zenith and its Galarian Gallery) —
  * card numbers disambiguate because subsets use distinct numbering (GG44…).
  */
 export class SetResolver {
-  constructor(private api: TcgIoClient) {}
+  constructor(private api: CardSource) {}
 
   /**
    * Rebuilt from the cached /sets response on every call — the underlying
@@ -19,12 +19,20 @@ export class SetResolver {
   async mapping(): Promise<Map<string, SetInfo[]>> {
     const sets = await this.api.getAllSets();
     const map = new Map<string, SetInfo[]>();
-    for (const set of sets) {
-      if (!set.ptcgoCode) continue;
-      const key = set.ptcgoCode.toUpperCase();
+    const add = (code: string, set: SetInfo) => {
+      const key = code.toUpperCase();
       const list = map.get(key) ?? [];
-      list.push(set);
+      if (!list.some((s) => s.id === set.id)) list.push(set);
       map.set(key, list);
+    };
+    for (const set of sets) {
+      if (set.ptcgoCode) add(set.ptcgoCode, set);
+    }
+    // Fill gaps in the source's Live codes: SET_CODE_OVERRIDES="PBL=me05,POR=me04".
+    const byId = new Map(sets.map((s) => [s.id.toLowerCase(), s]));
+    for (const [code, setId] of parseSetCodeOverrides(process.env.SET_CODE_OVERRIDES)) {
+      const set = byId.get(setId.toLowerCase());
+      if (set) add(code, { ...set, ptcgoCode: set.ptcgoCode ?? code.toUpperCase() });
     }
     for (const list of map.values()) {
       list.sort((a, b) => (b.total ?? 0) - (a.total ?? 0)); // main set before subsets
@@ -48,4 +56,13 @@ export class SetResolver {
     }
     return map;
   }
+}
+
+/** "PBL=me05, POR=me04" → [["PBL","me05"],["POR","me04"]]; malformed pairs are skipped. */
+export function parseSetCodeOverrides(raw: string | undefined): [string, string][] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((pair) => pair.split("=").map((p) => p.trim()))
+    .filter((p): p is [string, string] => p.length === 2 && /^[A-Za-z0-9]{2,5}$/.test(p[0]) && p[1].length > 0);
 }

@@ -11,10 +11,10 @@ import { currentLegalMarks, isStandardLegal } from "./legality.js";
 import { parseScannedLines } from "./scan.js";
 import { resolveScanned } from "./scanresolve.js";
 import type { SetResolver } from "./sets.js";
-import type { TcgIoClient } from "./tcgio.js";
+import type { CardSource } from "./cardsource.js";
 import { guard, textResult } from "./toolutil.js";
 
-export function registerScanTools(server: McpServer, api: TcgIoClient, resolver: SetResolver): void {
+export function registerScanTools(server: McpServer, api: CardSource, resolver: SetResolver): void {
   server.registerTool(
     "resolve_scanned",
     {

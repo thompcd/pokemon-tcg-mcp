@@ -20,6 +20,11 @@ function markForYear(year: number): string {
   return String.fromCharCode(MARK_ANCHOR.letter.charCodeAt(0) + (year - MARK_ANCHOR.year));
 }
 
+/** The year a regulation mark's sets started releasing in English (G → 2023). */
+export function yearOfMark(letter: string): number {
+  return MARK_ANCHOR.year + (letter.toUpperCase().charCodeAt(0) - MARK_ANCHOR.letter.charCodeAt(0));
+}
+
 export function currentLegalMarks(now: Date = new Date()): string[] {
   const override = process.env.STANDARD_REGULATION_MARKS;
   if (override) {

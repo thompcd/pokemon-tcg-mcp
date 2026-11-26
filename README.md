@@ -5,7 +5,8 @@ card data and competitive meta information, over stdio.
 
 **Data sources**
 
-- [pokemontcg.io](https://pokemontcg.io) API v2 — card database, legality data, cardmarket (EUR) and TCGplayer (USD) prices.
+- [TCGdex](https://tcgdex.dev) REST API (default) — free, keyless card database with regulation marks, legality, cardmarket (EUR) and TCGplayer (USD) prices. Queries are evaluated locally over a disk-cached card index (see *Card data* below).
+- [pokemontcg.io](https://pokemontcg.io) API v2 (legacy, `CARD_SOURCE=pokemontcgio`) — being retired in favour of the paid Scrydex API; kept only while it still answers.
 - [Limitless TCG](https://limitlesstcg.com) — metagame share from major tournaments (light, cached fetch of the public `/decks` stats page; Limitless' documented API only covers its online tournament platform, so there is no JSON endpoint for this table).
 
 ## Tools
@@ -44,11 +45,27 @@ npm run build
 npm test        # unit tests (parsers, query builder, deck builder, counter-score, collection)
 ```
 
-### API key (optional but recommended)
+### Card data
 
-The server works without a key, at lower rate limits. Get a free key at
-[dev.pokemontcg.io](https://dev.pokemontcg.io), then export it as
-`POKEMONTCG_API_KEY`.
+No API key is needed. By default cards come from TCGdex. Its list endpoint
+only returns card briefs and can't run rules-text searches, so the server
+loads the slice of data a query needs (a set, a name search, or the whole
+standard pool) and evaluates the pokemontcg.io-style Lucene query locally.
+The first query that needs the standard pool fetches a few thousand card
+documents; after that everything is served from the cache.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `CARD_SOURCE` | `tcgdex` | `pokemontcgio` switches back to the legacy pokemontcg.io API (then `POKEMONTCG_API_KEY` raises its rate limit). |
+| `CARD_CACHE_DIR` | `~/.cache/pokemon-tcg-mcp` | Disk cache for sets and cards (`off` = memory only). |
+| `TCGDEX_API_BASE` | `https://api.tcgdex.net/v2/en` | TCGdex base URL, including language. |
+| `STANDARD_POOL_SINCE` | derived from regulation marks | Earliest set release date (`YYYY-MM-DD`) searched by unscoped queries. |
+| `SET_CODE_OVERRIDES` | — | Extra TCG Live code → set id pairs where TCGdex lacks a code, e.g. `PBL=me05,POR=me04`. |
+
+Card ids are TCGdex ids (`sv06-144`), not pokemontcg.io ids (`sv6-144`).
+Collection files and saved sessions store TCG Live lines, not ids, so they
+carry over unchanged. Searches with no name, set or id constraint (pure text
+or type filters) only cover the standard pool.
 
 ### Collection file (for the collection & deck-builder tools)
 
@@ -71,24 +88,23 @@ Energy:
 ```
 
 The path comes from `POKEMON_COLLECTION_PATH` (default: `./collection.txt`
-relative to the server's working directory). Set it alongside the API key:
+relative to the server's working directory). Set it when you register the server:
 
 ```bash
 claude mcp add pokemon-tcg \
-  --env POKEMONTCG_API_KEY=your-key-here \
   --env POKEMON_COLLECTION_PATH=/absolute/path/to/collection.txt \
   -- node /absolute/path/to/pokemon-tcg-mcp/dist/index.js
 ```
 
 You can edit the file by hand or through `collection_add` /
 `collection_remove` — comments and unrelated lines are preserved. Lines that
-fail to resolve on pokemontcg.io show up as warnings and are skipped by the
+fail to resolve in the card database show up as warnings and are skipped by the
 deck builder; they never break anything.
 
 ### Add to Claude Code
 
 ```bash
-claude mcp add pokemon-tcg --env POKEMONTCG_API_KEY=your-key-here -- node /absolute/path/to/pokemon-tcg-mcp/dist/index.js
+claude mcp add pokemon-tcg -- node /absolute/path/to/pokemon-tcg-mcp/dist/index.js
 ```
 
 ### Add to Claude Desktop
@@ -101,7 +117,7 @@ claude mcp add pokemon-tcg --env POKEMONTCG_API_KEY=your-key-here -- node /absol
     "pokemon-tcg": {
       "command": "node",
       "args": ["/absolute/path/to/pokemon-tcg-mcp/dist/index.js"],
-      "env": { "POKEMONTCG_API_KEY": "your-key-here" }
+      "env": { "POKEMON_COLLECTION_PATH": "/absolute/path/to/collection.txt" }
     }
   }
 }
@@ -134,8 +150,12 @@ src/
 ├── collection.ts        collection file parse/mutate, comment-preserving (pure, tested)
 ├── resolve.ts           shared decklist-line → card resolution (one query per set code)
 ├── validate.ts          shared deck rule checks (size, ≤4/name, ACE SPEC, legality)
-├── tcgio.ts             pokemontcg.io v2 client (cached searches, sets, card-by-id)
-├── sets.ts              TCG Live set code → pokemontcg.io set-id mapping (from /sets)
+├── cardsource.ts        CardSource interface every tool talks to
+├── tcgdex.ts            TCGdex backend (default): scoped loading, mapping to the Card shape
+├── lucene.ts            local evaluator for pokemontcg.io-style Lucene queries
+├── diskcache.ts         JSON-file cache for fetched sets and cards
+├── tcgio.ts             legacy pokemontcg.io v2 client (CARD_SOURCE=pokemontcgio)
+├── sets.ts              TCG Live set code → set-id mapping (from /sets, plus SET_CODE_OVERRIDES)
 ├── qbuilder.ts          Lucene `q` builder + keyword extraction (pure, tested)
 ├── deck.ts              TCG Live/PTCGO decklist parser (pure, tested)
 ├── legality.ts          standard legality from regulation marks (see Design notes)

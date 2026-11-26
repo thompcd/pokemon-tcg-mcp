@@ -2,10 +2,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
-import { VERSION, pokemonTcgApiKey } from "./config.js";
+import type { CardSource } from "./cardsource.js";
+import { VERSION, cardCacheDir, cardSourceName, pokemonTcgApiKey } from "./config.js";
 import { registerPrompts } from "./prompts.js";
 import { SetResolver } from "./sets.js";
 import { FsStorage, sessionsDir } from "./storage.js";
+import { TcgdexClient } from "./tcgdex.js";
 import { TcgIoClient } from "./tcgio.js";
 import { registerTools } from "./tools.js";
 import { registerBuildTools } from "./tools-build.js";
@@ -14,7 +16,7 @@ import { registerScanTools } from "./tools-scan.js";
 import { registerSessionTools } from "./tools-session.js";
 
 async function main(): Promise<void> {
-  const api = new TcgIoClient();
+  const api: CardSource = cardSourceName() === "pokemontcgio" ? new TcgIoClient() : new TcgdexClient();
   const resolver = new SetResolver(api);
   const storage = new FsStorage(sessionsDir());
 
@@ -34,10 +36,13 @@ async function main(): Promise<void> {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error(
-    `[pokemon-tcg-mcp] v${VERSION} ready on stdio` +
-      (pokemonTcgApiKey() ? " (pokemontcg.io API key set)" : " (no POKEMONTCG_API_KEY — lower rate limits)"),
-  );
+  const detail =
+    api instanceof TcgIoClient
+      ? pokemonTcgApiKey()
+        ? "pokemontcg.io, API key set"
+        : "pokemontcg.io, no POKEMONTCG_API_KEY — lower rate limits"
+      : `TCGdex, cache ${cardCacheDir() ?? "memory only"}`;
+  console.error(`[pokemon-tcg-mcp] v${VERSION} ready on stdio (card data: ${detail})`);
 }
 
 main().catch((err) => {
