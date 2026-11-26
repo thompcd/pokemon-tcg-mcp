@@ -79,7 +79,7 @@ const SCENARIOS = {
   deck: ["check_deck", { decklist: DEMO_DECK }],
   meta: ["meta_snapshot", {}],
   price: ["price_check", { name: "Jacinthe" }],
-  card: ["get_card", { id: "me2pt5-39" }],
+  card: ["get_card", { name: "Psyduck", set: "ASC" }], // by name+set: ids differ between card sources
   collection: ["collection_list", {}],
   colladd: ["collection_add", { lines: "4 Jacinthe POR 75" }],
   ambig: ["collection_add", { lines: "1 Slowbro" }],
